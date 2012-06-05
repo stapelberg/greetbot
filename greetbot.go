@@ -11,6 +11,7 @@ import (
 	"time"
 	"math/rand"
 	"greetbot/histogram"
+	"regexp"
 )
 
 var irc_channel *string = flag.String(
@@ -22,6 +23,8 @@ var greetings *string = flag.String(
 	"greetings",
 	"hello,hallo,hey,hi,yo,good morning,ohai",
 	"Greeting words on which the bot should react, comma-separated")
+
+var greetings_re []*regexp.Regexp
 
 var histogram_path *string = flag.String(
 	"histogram_path",
@@ -35,9 +38,9 @@ var lastGreetingTime time.Time = time.Now()
 // Returns true if any of the greeting words of the -greetings flag is
 // contained in the given message.
 func containsGreeting(msg string) bool {
-	lcMsg := strings.ToLower(msg)
-	for _, greetword := range strings.SplitN(*greetings, ",", -1) {
-		if strings.Contains(lcMsg, greetword) {
+	lcMsg := []byte(strings.ToLower(msg))
+	for _, re := range greetings_re {
+		if re.Match(lcMsg) {
 			return true
 		}
 	}
@@ -104,6 +107,13 @@ func handleMessage(conn *irc.Conn, line *irc.Line) {
 
 func main() {
 	flag.Parse()
+
+	// Compile regular expressions which match the greeting words if they
+	// appear as a standalone word.
+	for _, greetword := range strings.SplitN(*greetings, ",", -1) {
+		re := regexp.MustCompile(`\b` + greetword + `\b`)
+		greetings_re = append(greetings_re, re)
+	}
 
 	quit := make(chan bool)
 
