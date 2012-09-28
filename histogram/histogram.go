@@ -10,6 +10,7 @@ import (
 	"time"
 	"os"
 	"strings"
+	"syscall"
 )
 
 // A combination of time.Weekday and an integer representing each hour of the
@@ -104,9 +105,9 @@ func Load(filename string) Histogram {
 
 	// Check if the file exists and load it, if so. Otherwise, create a new file.
 	if _, err := os.Stat(filename); err != nil {
-		if e, ok := err.(*os.PathError); ok && e.Err != os.ENOENT {
+		if e, ok := err.(*os.PathError); ok && e.Err != syscall.ENOENT {
 			log.Fatalf(`Error loading histogram data from "%s": %s`, filename, err)
-		} 
+		}
 
 		// Err == os.ENOENT, this is ok.
 	} else {
