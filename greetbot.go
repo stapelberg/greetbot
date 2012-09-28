@@ -31,7 +31,7 @@ var histogram_path *string = flag.String(
 	"./histogram.data",
 	"Serialized protobuf file containing the histogram data")
 
-var my_histogram histogram.Histogram = histogram.Load(*histogram_path)
+var my_histogram histogram.Histogram
 
 var lastGreetingTime time.Time = time.Now()
 
@@ -114,6 +114,8 @@ func main() {
 		re := regexp.MustCompile(`\b` + greetword + `\b`)
 		greetings_re = append(greetings_re, re)
 	}
+
+	my_histogram = histogram.Load(*histogram_path)
 
 	quit := make(chan bool)
 
