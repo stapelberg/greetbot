@@ -5,13 +5,13 @@ package main
 
 import irc "github.com/fluffle/goirc/client"
 import (
-	"log"
 	"flag"
+	"greetbot/histogram"
+	"log"
+	"math/rand"
+	"regexp"
 	"strings"
 	"time"
-	"math/rand"
-	"greetbot/histogram"
-	"regexp"
 )
 
 var irc_channel *string = flag.String(
@@ -41,9 +41,11 @@ func containsGreeting(msg string) bool {
 	lcMsg := []byte(strings.ToLower(msg))
 	for _, re := range greetings_re {
 		if re.Match(lcMsg) {
+			log.Printf("Message %s contains greeting %s\n", msg, re)
 			return true
 		}
 	}
+	log.Printf("Message %s does NOT contain a greeting\n", msg)
 	return false
 }
 
@@ -83,7 +85,7 @@ func handleMessage(conn *irc.Conn, line *irc.Line) {
 			// Reply after a random time, at least 1s after the
 			// original line, at most 5s after the original line.
 			fuzz := rand.Int63n(4000)
-			time.Sleep((time.Duration)(1000 + fuzz) * time.Millisecond)
+			time.Sleep((time.Duration)(1000+fuzz) * time.Millisecond)
 			conn.Privmsg(*irc_channel, "hello!")
 		}()
 		return
@@ -133,7 +135,7 @@ func main() {
 	c.AddHandler("PRIVMSG", handleMessage)
 
 	log.Printf("Connecting...\n")
-	if err := c.Connect("irc.twice-irc.de"); err != nil {
+	if err := c.Connect("chat.freenode.net"); err != nil {
 		log.Printf("Connection error: %s\n", err.Error())
 	}
 
@@ -142,7 +144,7 @@ func main() {
 		select {
 		case <-quit:
 			log.Println("Disconnected. Reconnecting...")
-			if err := c.Connect("irc.twice-irc.de"); err != nil {
+			if err := c.Connect("chat.freenode.net"); err != nil {
 				log.Printf("Connection error: %s\n", err.Error())
 			}
 		}
