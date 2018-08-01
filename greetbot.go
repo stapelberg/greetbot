@@ -3,37 +3,46 @@
 // © 2012 Michael Stapelberg (see also: LICENSE)
 package main
 
-import irc "github.com/fluffle/goirc/client"
 import (
 	"flag"
-	"greetbot/histogram"
 	"log"
 	"math/rand"
 	"regexp"
 	"strings"
 	"time"
+
+	irc "github.com/fluffle/goirc/client"
+
+	"github.com/stapelberg/greetbot/histogram"
 )
 
-var irc_channel *string = flag.String(
-	"channel",
-	"#i3-build",
-	"In which channel this bot should be in")
+var (
+	ircChannel = flag.String(
+		"channel",
+		"#i3-build",
+		"In which channel this bot should be in")
 
-var greetings *string = flag.String(
-	"greetings",
-	"hello,hallo,hey,hi,yo,good morning,ohai",
-	"Greeting words on which the bot should react, comma-separated")
+	ircPassword = flag.String(
+		"password",
+		"",
+		"Server password, if required. For FreeNode, can be <account>:<password> to identify to services (https://freenode.net/kb/answer/registration)")
 
-var greetings_re []*regexp.Regexp
+	greetings = flag.String(
+		"greetings",
+		"hello,hallo,hey,hi,yo,good morning,ohai",
+		"Greeting words on which the bot should react, comma-separated")
 
-var histogram_path *string = flag.String(
-	"histogram_path",
-	"./histogram.data",
-	"Serialized protobuf file containing the histogram data")
+	greetings_re []*regexp.Regexp
 
-var my_histogram histogram.Histogram
+	histogram_path = flag.String(
+		"histogram_path",
+		"./histogram.data",
+		"Serialized protobuf file containing the histogram data")
 
-var lastGreetingTime time.Time = time.Now()
+	my_histogram histogram.Histogram
+
+	lastGreetingTime = time.Now()
+)
 
 // Returns true if any of the greeting words of the -greetings flag is
 // contained in the given message.
@@ -57,7 +66,7 @@ func isBot(nickname string) bool {
 // Called when somebody writes some message to the IRC channel.
 func handleMessage(conn *irc.Conn, line *irc.Line) {
 	msg := line.Args[1]
-	if line.Args[0] != *irc_channel {
+	if line.Args[0] != *ircChannel {
 		log.Printf(`Ignoring private message to me: "%s"`, msg)
 		return
 	}
@@ -86,7 +95,7 @@ func handleMessage(conn *irc.Conn, line *irc.Line) {
 			// original line, at most 5s after the original line.
 			fuzz := rand.Int63n(4000)
 			time.Sleep((time.Duration)(1000+fuzz) * time.Millisecond)
-			conn.Privmsg(*irc_channel, "Hello! Please be patient, as it may be some time before someone is around who can answer your question :)")
+			conn.Privmsg(*ircChannel, "Hello! Please be patient, as it may be some time before someone is around who can answer your question :)")
 		}()
 		return
 	}
@@ -123,19 +132,20 @@ func main() {
 
 	c := irc.SimpleClient("Eyo", "i3", "http://i3wm.org/")
 
-	c.AddHandler("connected",
+	c.HandleFunc(irc.CONNECTED,
 		func(conn *irc.Conn, line *irc.Line) {
-			log.Printf("Connected, joining channel %s\n", *irc_channel)
-			conn.Join(*irc_channel)
+			log.Printf("Connected, joining channel %s\n", *ircChannel)
+			conn.Join(*ircChannel)
 		})
 
-	c.AddHandler("disconnected",
+	c.HandleFunc("disconnected",
 		func(conn *irc.Conn, line *irc.Line) { quit <- true })
 
-	c.AddHandler("PRIVMSG", handleMessage)
+	c.HandleFunc("PRIVMSG", handleMessage)
 
 	log.Printf("Connecting...\n")
-	if err := c.Connect("chat.freenode.net"); err != nil {
+
+	if err := c.ConnectTo("chat.freenode.net", *ircPassword); err != nil {
 		log.Printf("Connection error: %s\n", err.Error())
 	}
 
@@ -144,7 +154,7 @@ func main() {
 		select {
 		case <-quit:
 			log.Println("Disconnected. Reconnecting...")
-			if err := c.Connect("chat.freenode.net"); err != nil {
+			if err := c.ConnectTo("chat.freenode.net", *ircPassword); err != nil {
 				log.Printf("Connection error: %s\n", err.Error())
 			}
 		}
