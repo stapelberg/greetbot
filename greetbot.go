@@ -95,7 +95,7 @@ func handleMessage(conn *irc.Conn, line *irc.Line) {
 			// original line, at most 5s after the original line.
 			fuzz := rand.Int63n(4000)
 			time.Sleep((time.Duration)(1000+fuzz) * time.Millisecond)
-			conn.Privmsg(*ircChannel, "Hello! Please be patient, as it may be some time before someone is around who can answer your question :)")
+			conn.Privmsg(*ircChannel, "Hello! Please be patient, as it may be some time before someone is around who can answer your question. In the meantime, please remember to read the user guide, as well as the current /topic")
 		}()
 		return
 	}
